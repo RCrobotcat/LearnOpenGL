@@ -21,10 +21,10 @@ out/
 # Compiled Dynamic libraries
 *.so
 *.dylib
-*.dll
+# *.dll
 
 # Compiled Static libraries
-*.a
+# *.a
 *.lib
 
 # Executables
