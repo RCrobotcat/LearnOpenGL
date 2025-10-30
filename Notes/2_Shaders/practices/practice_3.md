@@ -1,3 +1,7 @@
+### 3. 使用out关键字把顶点位置输出到片段着色器，并将片段的颜色设置为与顶点位置相等（来看看连顶点位置值都在三角形中被插值的结果）  
+### 做完这些后，尝试回答下面的问题：为什么在三角形的左下角是黑的? (因为OpenGL的坐标系是从-1到1，而颜色值是从0到1，所以负值会被截断为0，导致左下角显示为黑色)
+- `main.cpp`
+```c++
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -119,3 +123,51 @@ void processInput(GLFWwindow *window) {
 void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
     glViewport(0, 0, width, height);
 }
+
+```
+---
+- `vertexShader.vs`
+```glsl
+#version 330 core
+layout (location = 0) in vec3 aPos;
+layout (location = 1) in vec3 aColor;
+
+out vec3 ourColor;
+out vec4 vertexPosition;
+
+uniform float translationX;
+uniform float translationY;
+
+void main()
+{
+    // 沿 X 轴平移 translationX (转置后的矩阵)
+    mat4 T = mat4(
+        1.0, 0.0, 0.0, 0.0,
+        0.0, 1.0, 0.0, 0.0,
+        0.0, 0.0, 1.0, 0.0,
+        translationX, translationY, 0.0, 1.0
+    );
+
+    // 平移后再旋转
+    vec4 finalPos = T * vec4(aPos, 1.0);
+    vertexPosition = finalPos;
+
+    gl_Position = finalPos;
+    ourColor = aColor;
+}
+
+```
+---
+- `fragmentShader.fs`
+```glsl
+#version 330 core
+in vec3 ourColor;
+in vec4 vertexPosition;
+out vec4 FragColor;
+
+void main()
+{
+    FragColor = vertexPosition;
+}
+
+```

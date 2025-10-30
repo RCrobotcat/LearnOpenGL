@@ -1,3 +1,6 @@
+### 2. 使用uniform定义一个水平偏移量，在顶点着色器中使用这个偏移量把三角形移动到屏幕右侧
+- `main.cpp`
+```c++
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -92,10 +95,8 @@ int main() {
         ourShader.use();
 
         float time = glfwGetTime();
-        float translationXValue = sin(time) / 2.0f;
-        float translationYValue = cos(time) / 2.0f;
-        ourShader.setFloat("translationX", translationXValue);
-        ourShader.setFloat("translationY", translationYValue);
+        float translationValue = sin(time) / 2.0f;
+        ourShader.setFloat("translationX", translationValue);
 
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
@@ -119,3 +120,40 @@ void processInput(GLFWwindow *window) {
 void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
     glViewport(0, 0, width, height);
 }
+
+```
+---
+- `vertexShader.vs`
+```glsl
+#version 330 core
+layout (location = 0) in vec3 aPos;
+layout (location = 1) in vec3 aColor;
+
+out vec3 ourColor;
+uniform float translationX;
+
+void main()
+{
+    // 绕 z 轴旋转 180°
+    mat4 Rz180 = mat4(
+        -1.0,  0.0,  0.0,  0.0,
+         0.0, -1.0,  0.0,  0.0,
+         0.0,  0.0,  1.0,  0.0,
+         0.0,  0.0,  0.0,  1.0
+    );
+
+    // 沿 X 轴平移 translationX (转置后的矩阵)
+    mat4 T = mat4(
+        1.0, 0.0, 0.0, 0.0,
+        0.0, 1.0, 0.0, 0.0,
+        0.0, 0.0, 1.0, 0.0,
+        translationX, 0.0, 0.0, 1.0
+    );
+
+    // 平移后再旋转
+    vec4 finalPos = Rz180 * T * vec4(aPos, 1.0);
+    gl_Position = finalPos;
+    ourColor = aColor;
+}
+
+```
