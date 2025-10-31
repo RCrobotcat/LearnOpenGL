@@ -1,3 +1,29 @@
+### 4. 使用一个uniform变量作为mix函数的第三个参数来改变两个纹理可见度，使用上和下键来改变箱子或笑脸的可见度
+- `fragmentShader.vs`: mix(x, y, a) = x * (1 − a) + y * a
+```glsl
+#version 330 core
+in vec3 ourColor;
+in vec4 vertexPosition;
+in vec2 texCoord;
+
+uniform sampler2D texture1;
+uniform sampler2D texture2;
+
+uniform float mixT;
+
+out vec4 FragColor;
+
+void main()
+{
+    // mix(x, y, a) 是一个非常常用的 线性插值（Linear Interpolation, LERP）函数
+    // mix(x, y, a) = x * (1 − a) + y * a
+    FragColor = mix(texture(texture1, texCoord), texture(texture2,  vec2(1.0 - texCoord.x, texCoord.y)), mixT) * vec4(ourColor, 1.0);
+}
+
+```
+---
+- `main.cpp`
+```c++
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -189,3 +215,5 @@ void framebuffer_size_callback(GLFWwindow *window, int width, int height)
 {
     glViewport(0, 0, width, height);
 }
+
+```
