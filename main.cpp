@@ -1,6 +1,10 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 #include <iostream>
 #include <valarray>
 #include "Shader.h"
@@ -155,17 +159,31 @@ int main()
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, texture2);
 
+        // transformation matrix
+        glm::mat4 trans = glm::mat4(1.0f);
+        trans = glm::rotate(trans, (float) glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
+        trans = glm::translate(trans, glm::vec3(0.0f, 0.5f, 0.0f));
+        trans = glm::scale(trans, glm::vec3(0.5f, 0.5f, 0.5f));
+
         ourShader.use();
 
         float time = glfwGetTime();
-        float translationXValue = sin(time) / 2.0f;
-        float translationYValue = cos(time) / 2.0f;
-        float t = (sin(time) + cos(time)) / 2.0f;
-        ourShader.setFloat("translationX", translationXValue);
-        ourShader.setFloat("translationY", translationYValue);
-        ourShader.setFloat("mixT", t);
+        float mT = (sin(time) + cos(time)) / 2.0f;
+        ourShader.setFloat("mixT", mT);
+
+        unsigned int transformLoc = glGetUniformLocation(ourShader.ID, "transformation");
+        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
 
         glBindVertexArray(VAO);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+        // transformation matrix
+        glm::mat4 trans1 = glm::mat4(1.0f);
+        trans1 = glm::translate(trans1, glm::vec3(-0.5f, 0.5f, 0.0f));
+        float scaleAmount = static_cast<float>(sin(glfwGetTime()));
+        trans1 = glm::scale(trans1, glm::vec3(scaleAmount, scaleAmount, scaleAmount));
+        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans1));
+
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
         glfwSwapBuffers(window);
