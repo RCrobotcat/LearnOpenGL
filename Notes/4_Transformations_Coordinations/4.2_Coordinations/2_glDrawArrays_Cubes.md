@@ -1,3 +1,48 @@
+- `vertexShader.vs`:
+```glsl
+#version 330 core
+layout (location = 0) in vec3 aPos;
+layout (location = 1) in vec2 aTexCoord;
+
+out vec2 texCoord;
+
+uniform mat4 model;
+uniform mat4 view;
+uniform mat4 projection;
+
+void main()
+{
+    vec4 finalPos = projection * view * model * vec4(aPos, 1.0);
+
+    gl_Position = finalPos;
+    texCoord = aTexCoord;
+}
+
+```
+---
+- `fragmentShader.fs`:
+```glsl
+#version 330 core
+in vec2 texCoord;
+
+uniform sampler2D texture1;
+uniform sampler2D texture2;
+
+uniform float mixT;
+
+out vec4 FragColor;
+
+void main()
+{
+    // mix(x, y, a) 是一个非常常用的 线性插值（Linear Interpolation, LERP）函数
+    // mix(x, y, a) = x * (1 − a) + y * a
+    FragColor = mix(texture(texture1, texCoord), texture(texture2,  vec2(1.0 - texCoord.x, texCoord.y)), mixT);
+}
+
+```
+---
+- `main.cpp`
+```c++
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -218,11 +263,7 @@ int main()
             // model
             glm::mat4 modelMatrix = glm::mat4(1.0f);
             modelMatrix = glm::translate(modelMatrix, cubePositions[i]);
-            float angle = 20.0f * i;
-            if (angle == 0)
-                angle = 20.0f;
-            if (i % 3 == 0)
-                angle *= glfwGetTime();
+            float angle = 20.0f * i * glfwGetTime();
             modelMatrix = glm::rotate(modelMatrix, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
             ourShader.setMat4("model", modelMatrix);
 
@@ -249,3 +290,5 @@ void framebuffer_size_callback(GLFWwindow *window, int width, int height)
 {
     glViewport(0, 0, width, height);
 }
+
+```
