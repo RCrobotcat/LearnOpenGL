@@ -1,16 +1,28 @@
 #version 330 core
-in vec2 texCoord;
+in vec3 Normal;
+in vec3 FragPos;
 
-uniform sampler2D texture1;
-uniform sampler2D texture2;
-
-uniform float mixT;
+uniform vec3 lightColor;
+uniform vec3 objectColor;
+uniform vec3 lightPos;
+uniform vec3 viewPos;
 
 out vec4 FragColor;
 
 void main()
 {
-    // mix(x, y, a) 是一个非常常用的 线性插值（Linear Interpolation, LERP）函数
-    // mix(x, y, a) = x * (1 − a) + y * a
-    FragColor = mix(texture(texture1, texCoord), texture(texture2,  vec2(1.0 - texCoord.x, texCoord.y)), mixT);
+    float ambientStrength = 0.1;
+    vec3 ambient = ambientStrength * lightColor;
+
+    vec3 norm = normalize(Normal);
+    vec3 lightDir = normalize(lightPos - FragPos);
+    vec3 diffuse = max(dot(norm, lightDir), 0.0) * lightColor;
+
+    vec3 viewDir = normalize(viewPos - FragPos);
+    vec3 reflectDir = reflect(-lightDir, norm);
+    // vec3 reflectDir = 2 * dot(norm, lightDir) * norm - lightDir; // Manual reflection calculation
+    vec3 specular = pow(max(dot(viewDir, reflectDir), 0.0), 32) * lightColor;
+
+    vec3 result = (ambient + diffuse + specular) * objectColor;
+    FragColor = vec4(result, 1.0);
 }
