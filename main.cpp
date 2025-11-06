@@ -36,7 +36,7 @@ float deltaTime = 0.0f; // 当前帧与上一帧的时间差
 float lastFrame = 0.0f; // 上一帧的时间
 
 // lighting
-glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
+glm::vec3 lightPos(1.2f, 0.5f, 2.0f);
 
 int main()
 {
@@ -165,11 +165,13 @@ int main()
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+        glm::vec3 newLightPos = glm::vec3(lightPos.x * sin(glfwGetTime()), lightPos.y, lightPos.z * cos(glfwGetTime()));
+
         ourShader.use();
 
         ourShader.setVec3("objectColor", 1.0f, 0.5f, 0.31f);
         ourShader.setVec3("lightColor",  1.0f, 1.0f, 1.0f);
-        ourShader.setVec3("lightPos", lightPos.x, lightPos.y, lightPos.z);
+        ourShader.setVec3("lightPos", newLightPos.x, newLightPos.y, newLightPos.z);
         ourShader.setVec3("viewPos", camera.Position.x, camera.Position.y, camera.Position.z);
 
         // model
@@ -195,7 +197,7 @@ int main()
         lightShader.setMat4("projection", projectionMatrix);
         lightShader.setMat4("view", viewMatrix);
         modelMatrix = glm::mat4(1.0f);
-        modelMatrix = glm::translate(modelMatrix, lightPos);
+        modelMatrix = glm::translate(modelMatrix, newLightPos);
         modelMatrix = glm::scale(modelMatrix, glm::vec3(0.2f)); // a smaller cube
         lightShader.setMat4("model", modelMatrix);
 

@@ -1,3 +1,7 @@
+### 尝试实现一个Gouraud着色（而不是风氏着色）。如果你做对了话，立方体的光照应该会看起来有些奇怪，尝试推理为什么它会看起来这么奇怪 =>（在顶点着色器中实现的风氏光照模型叫做Gouraud着色 Gouraud Shading）
+#### 解答：因为Gouraud着色是在顶点处计算光照，然后将颜色插值到片段上。这意味着如果一个面有很少的顶点（例如立方体的每个面只有4个顶点），那么在面内部的颜色变化会非常有限，导致光照效果看起来不自然或“奇怪”。相比之下，Phong着色是在片段级别计算光照，可以更精确地反映光照变化，从而产生更平滑和真实的效果。
+- `vertexShader.glsl`:
+```glsl
 #version 330 core
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aNormal;
@@ -33,3 +37,22 @@ void main()
 
     PhongColor = ambient + diffuse + specular;
 }
+
+```
+---
+- `fragmentShader.glsl`:
+```glsl
+#version 330 core
+in vec3 PhongColor;
+
+uniform vec3 objectColor;
+
+out vec4 FragColor;
+
+void main()
+{
+    vec3 result = PhongColor * objectColor;
+    FragColor = vec4(result, 1.0);
+}
+
+```
