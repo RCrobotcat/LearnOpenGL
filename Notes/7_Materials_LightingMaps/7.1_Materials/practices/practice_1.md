@@ -1,3 +1,22 @@
+### 你能做到这件事吗，改变光照颜色导致改变光源立方体的颜色？
+- `light_fragmentShader.fs`
+```glsl
+#version 330 core
+in vec2 texCoord;
+
+uniform vec3 lightColor;
+
+out vec4 FragColor;
+
+void main()
+{
+    FragColor = vec4(lightColor, 1.0);
+}
+
+```
+---
+- `main.cpp`
+```c++
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -169,30 +188,25 @@ int main()
 
         ourShader.use();
 
-        // 青色塑料 cyan plastic 材质
-        // 材质参考：http://devernay.free.fr/cours/opengl/materials.html
-        ourShader.setVec3("material.ambient", 0.0f, 0.1f, 0.06f);
-        ourShader.setVec3("material.diffuse", 0.0f, 0.50980392f, 0.50980392f);
-        ourShader.setVec3("material.specular", 0.50196078f, 0.50196078f, 0.50196078f);
+        ourShader.setVec3("material.ambient", 1.0f, 0.5f, 0.31f);
+        ourShader.setVec3("material.diffuse", 1.0f, 0.5f, 0.31f);
+        ourShader.setVec3("material.specular", 0.5f, 0.5f, 0.5f);
         ourShader.setFloat("material.shininess", 32.0f);
 
         ourShader.setVec3("objectColor", 1.0f, 0.5f, 0.31f);
         ourShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
         ourShader.setVec3("viewPos", camera.Position.x, camera.Position.y, camera.Position.z);
 
-        // glm::vec3 lightColor;
-        // lightColor.x = sin(glfwGetTime() * 2.0f);
-        // lightColor.y = sin(glfwGetTime() * 0.7f);
-        // lightColor.z = sin(glfwGetTime() * 1.3f);
-        // glm::vec3 diffuseColor = lightColor * glm::vec3(0.5f); // 降低影响
-        // glm::vec3 ambientColor = diffuseColor * glm::vec3(0.2f); // 很低的影响
+        glm::vec3 lightColor;
+        lightColor.x = sin(glfwGetTime() * 2.0f);
+        lightColor.y = sin(glfwGetTime() * 0.7f);
+        lightColor.z = sin(glfwGetTime() * 1.3f);
+        glm::vec3 diffuseColor = lightColor * glm::vec3(0.5f); // 降低影响
+        glm::vec3 ambientColor = diffuseColor * glm::vec3(0.2f); // 很低的影响
 
         ourShader.setVec3("light.position", lightPos.x, lightPos.y, lightPos.z);
-        // ourShader.setVec3("light.ambient", ambientColor.x, ambientColor.y, ambientColor.z);
-        // ourShader.setVec3("light.diffuse", diffuseColor.x, diffuseColor.y, diffuseColor.z);
-        // ourShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
-        ourShader.setVec3("light.ambient", 1.0f, 1.0f, 1.0f); // note that all light colors are set at full intensity
-        ourShader.setVec3("light.diffuse", 1.0f, 1.0f, 1.0f);
+        ourShader.setVec3("light.ambient", ambientColor.x, ambientColor.y, ambientColor.z);
+        ourShader.setVec3("light.diffuse", diffuseColor.x, diffuseColor.y, diffuseColor.z);
         ourShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
 
         // model
@@ -221,8 +235,7 @@ int main()
         modelMatrix = glm::translate(modelMatrix, lightPos);
         modelMatrix = glm::scale(modelMatrix, glm::vec3(0.2f)); // a smaller cube
         lightShader.setMat4("model", modelMatrix);
-        // lightShader.setVec3("lightColor", lightColor.x, lightColor.y, lightColor.z);
-        lightShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
+        lightShader.setVec3("lightColor", lightColor.x, lightColor.y, lightColor.z);
 
         glBindVertexArray(lightVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -316,3 +329,5 @@ void framebuffer_size_callback(GLFWwindow *window, int width, int height)
 {
     glViewport(0, 0, width, height);
 }
+
+```

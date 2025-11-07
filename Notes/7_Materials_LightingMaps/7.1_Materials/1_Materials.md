@@ -1,3 +1,78 @@
+- `vertexShader.vs`
+```glsl
+#version 330 core
+layout (location = 0) in vec3 aPos;
+layout (location = 1) in vec3 aNormal;
+
+uniform mat4 model;
+uniform mat4 view;
+uniform mat4 projection;
+
+out vec3 Normal;
+out vec3 FragPos;
+
+void main()
+{
+    vec4 finalPos = projection * view * model * vec4(aPos, 1.0);
+    gl_Position = finalPos;
+    Normal = mat3(transpose(inverse(model))) * aNormal; // Transform normal to world space
+    FragPos = vec3(model * vec4(aPos, 1.0));
+}
+
+```
+---
+- `fragmentShader.fs`
+```glsl
+#version 330 core
+struct Material {
+    vec3 ambient;
+    vec3 diffuse;
+    vec3 specular;
+    float shininess;
+};
+
+uniform Material material;
+
+struct Light {
+    vec3 position;
+
+    vec3 ambient;
+    vec3 diffuse;
+    vec3 specular;
+};
+
+uniform Light light;
+
+in vec3 Normal;
+in vec3 FragPos;
+
+uniform vec3 lightColor;
+uniform vec3 objectColor;
+uniform vec3 viewPos;
+
+out vec4 FragColor;
+
+void main()
+{
+    vec3 ambient = material.ambient * light.ambient;
+
+    vec3 norm = normalize(Normal);
+    vec3 lightDir = normalize(light.position - FragPos);
+    vec3 diffuse = max(dot(norm, lightDir), 0.0) * material.diffuse * light.diffuse;
+
+    vec3 viewDir = normalize(viewPos - FragPos);
+    vec3 reflectDir = reflect(-lightDir, norm);
+    // vec3 reflectDir = 2 * dot(norm, lightDir) * norm - lightDir; // Manual reflection calculation
+    vec3 specular = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess) * material.specular * light.specular;
+
+    vec3 result = (ambient + diffuse + specular) * objectColor;
+    FragColor = vec4(result, 1.0);
+}
+
+```
+---
+- `main.cpp`
+```c++
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -169,30 +244,25 @@ int main()
 
         ourShader.use();
 
-        // 青色塑料 cyan plastic 材质
-        // 材质参考：http://devernay.free.fr/cours/opengl/materials.html
-        ourShader.setVec3("material.ambient", 0.0f, 0.1f, 0.06f);
-        ourShader.setVec3("material.diffuse", 0.0f, 0.50980392f, 0.50980392f);
-        ourShader.setVec3("material.specular", 0.50196078f, 0.50196078f, 0.50196078f);
+        ourShader.setVec3("material.ambient", 1.0f, 0.5f, 0.31f);
+        ourShader.setVec3("material.diffuse", 1.0f, 0.5f, 0.31f);
+        ourShader.setVec3("material.specular", 0.5f, 0.5f, 0.5f);
         ourShader.setFloat("material.shininess", 32.0f);
 
         ourShader.setVec3("objectColor", 1.0f, 0.5f, 0.31f);
         ourShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
         ourShader.setVec3("viewPos", camera.Position.x, camera.Position.y, camera.Position.z);
 
-        // glm::vec3 lightColor;
-        // lightColor.x = sin(glfwGetTime() * 2.0f);
-        // lightColor.y = sin(glfwGetTime() * 0.7f);
-        // lightColor.z = sin(glfwGetTime() * 1.3f);
-        // glm::vec3 diffuseColor = lightColor * glm::vec3(0.5f); // 降低影响
-        // glm::vec3 ambientColor = diffuseColor * glm::vec3(0.2f); // 很低的影响
+        glm::vec3 lightColor;
+        lightColor.x = sin(glfwGetTime() * 2.0f);
+        lightColor.y = sin(glfwGetTime() * 0.7f);
+        lightColor.z = sin(glfwGetTime() * 1.3f);
+        glm::vec3 diffuseColor = lightColor * glm::vec3(0.5f); // 降低影响
+        glm::vec3 ambientColor = diffuseColor * glm::vec3(0.2f); // 很低的影响
 
         ourShader.setVec3("light.position", lightPos.x, lightPos.y, lightPos.z);
-        // ourShader.setVec3("light.ambient", ambientColor.x, ambientColor.y, ambientColor.z);
-        // ourShader.setVec3("light.diffuse", diffuseColor.x, diffuseColor.y, diffuseColor.z);
-        // ourShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
-        ourShader.setVec3("light.ambient", 1.0f, 1.0f, 1.0f); // note that all light colors are set at full intensity
-        ourShader.setVec3("light.diffuse", 1.0f, 1.0f, 1.0f);
+        ourShader.setVec3("light.ambient", ambientColor.x, ambientColor.y, ambientColor.z);
+        ourShader.setVec3("light.diffuse", diffuseColor.x, diffuseColor.y, diffuseColor.z);
         ourShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
 
         // model
@@ -221,8 +291,6 @@ int main()
         modelMatrix = glm::translate(modelMatrix, lightPos);
         modelMatrix = glm::scale(modelMatrix, glm::vec3(0.2f)); // a smaller cube
         lightShader.setMat4("model", modelMatrix);
-        // lightShader.setVec3("lightColor", lightColor.x, lightColor.y, lightColor.z);
-        lightShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
 
         glBindVertexArray(lightVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -316,3 +384,5 @@ void framebuffer_size_callback(GLFWwindow *window, int width, int height)
 {
     glViewport(0, 0, width, height);
 }
+
+```
