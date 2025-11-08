@@ -78,10 +78,12 @@ int main()
     // texture
     unsigned int diffuseMap = loadTexture("../Notes/7_Materials_LightingMaps/7.2_LightingMaps/container2.png");
     unsigned int specularMap = loadTexture("../Notes/7_Materials_LightingMaps/7.2_LightingMaps/container2_specular.png");
+    unsigned int emissionMap = loadTexture("../Notes/7_Materials_LightingMaps/7.2_LightingMaps/matrix.jpg");
 
     ourShader.use();
     ourShader.setInt("material.diffuse", 0);
     ourShader.setInt("material.specular", 1);
+    ourShader.setInt("material.emission", 2);
 
     // VBO, VAO
     float vertices[] = {
@@ -179,6 +181,8 @@ int main()
         glBindTexture(GL_TEXTURE_2D, diffuseMap);
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, specularMap);
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, emissionMap);
 
         ourShader.use();
 
