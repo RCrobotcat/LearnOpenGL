@@ -1,3 +1,17 @@
+- `shaderSingleColor.fs`
+```glsl
+#version 330 core
+out vec4 FragColor;
+
+void main()
+{
+    FragColor = vec4(0.04, 0.28, 0.26, 1.0);
+}
+
+```
+---
+- `main.cpp`
+```c++
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -381,3 +395,5 @@ unsigned int loadTexture(char const *path)
 
     return textureID;
 }
+
+```
