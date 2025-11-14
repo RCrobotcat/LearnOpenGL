@@ -1,3 +1,21 @@
+- `Blending.fs`
+```glsl
+#version 330 core
+out vec4 FragColor;
+
+in vec2 TexCoords;
+
+uniform sampler2D texture1;
+
+void main()
+{
+    FragColor = texture(texture1, TexCoords);
+}
+
+```
+---
+- `main.cpp`
+```c++
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -402,3 +420,5 @@ unsigned int loadTexture(char const *path)
 
     return textureID;
 }
+
+```

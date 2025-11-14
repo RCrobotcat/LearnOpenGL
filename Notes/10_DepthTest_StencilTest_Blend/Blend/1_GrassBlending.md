@@ -1,3 +1,24 @@
+- `Blending.fs`
+```glsl
+#version 330 core
+out vec4 FragColor;
+
+in vec2 TexCoords;
+
+uniform sampler2D texture1;
+
+void main()
+{
+    vec4 texColor = texture(texture1, TexCoords);
+    if(texColor.a < 0.1)
+        discard;
+    FragColor = texColor;
+}
+
+```
+---
+- `main.cpp`
+```c++
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -10,8 +31,6 @@
 #include "Shader.h"
 
 #define STB_IMAGE_IMPLEMENTATION
-#include <map>
-
 #include "Camera.h"
 #include "stb_image.h"
 
@@ -184,19 +203,16 @@ int main()
     // textures
     unsigned int cubeTexture = loadTexture("../Notes/10_DepthTest_StencilTest_Blend/marble.jpg");
     unsigned int floorTexture = loadTexture("../Notes/10_DepthTest_StencilTest_Blend/metal.png");
-    unsigned int transparentTexture = loadTexture("../Notes/10_DepthTest_StencilTest_Blend/Blend/blending_transparent_window.png");
+    unsigned int transparentTexture = loadTexture("../Notes/10_DepthTest_StencilTest_Blend/Blend/grass.png");
 
-    // transparent window locations
-    // --------------------------------
-    std::vector<glm::vec3> windows
+    std::vector<glm::vec3> vegetation
     {
         glm::vec3(-1.5f, 0.0f, -0.48f),
-        glm::vec3( 1.5f, 0.0f, 0.51f),
-        glm::vec3( 0.0f, 0.0f, 0.7f),
+        glm::vec3(1.5f, 0.0f, 0.51f),
+        glm::vec3(0.0f, 0.0f, 0.7f),
         glm::vec3(-0.3f, 0.0f, -2.3f),
-        glm::vec3( 0.5f, 0.0f, -0.6f)
+        glm::vec3(0.5f, 0.0f, -0.6f)
     };
-
 
 
     shader.use();
@@ -210,10 +226,6 @@ int main()
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS); // default: GL_LESS
 
-    // 启用混合
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
     while (!glfwWindowShouldClose(window))
     {
         float currentFrame = static_cast<float>(glfwGetTime());
@@ -221,15 +233,6 @@ int main()
         lastFrame = currentFrame;
 
         processInput(window);
-
-        // sort the transparent windows before rendering
-        // ---------------------------------------------
-        std::map<float, glm::vec3> sorted;
-        for (unsigned int i = 0; i < windows.size(); i++)
-        {
-            float distance = glm::length(camera.Position - windows[i]);
-            sorted[distance] = windows[i];
-        }
 
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -262,13 +265,13 @@ int main()
         shader.setMat4("model", model);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
-        // windows (from furthest to nearest) => Painter's Algorithm
+        // vegetation
         glBindVertexArray(transparentVAO);
         glBindTexture(GL_TEXTURE_2D, transparentTexture);
-        for (std::map<float, glm::vec3>::reverse_iterator it = sorted.rbegin(); it != sorted.rend(); ++it)
+        for (unsigned int i = 0; i < vegetation.size(); i++)
         {
             model = glm::mat4(1.0f);
-            model = glm::translate(model, it->second);
+            model = glm::translate(model, vegetation[i]);
             shader.setMat4("model", model);
             glDrawArrays(GL_TRIANGLES, 0, 6);
         }
@@ -402,3 +405,5 @@ unsigned int loadTexture(char const *path)
 
     return textureID;
 }
+
+```
