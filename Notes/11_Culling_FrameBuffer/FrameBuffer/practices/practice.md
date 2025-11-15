@@ -1,3 +1,9 @@
+### 摆弄内核值并创建您自己感兴趣的后处理效果。尝试在互联网上搜索其他有趣的内核。
+
+### 你能使用framebuffers创建一个后视镜吗?为此，你必须绘制两次场景:一次将相机旋转180度，另一次将相机正常旋转。试着在屏幕顶部创建一个小的四边形来应用镜像纹理.
+
+- `main.cpp`
+```c++
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -419,3 +425,5 @@ unsigned int loadTexture(char const *path)
 
     return textureID;
 }
+
+```
