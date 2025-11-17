@@ -73,8 +73,8 @@ int main()
 
     // load model
     Shader modelShader("../shaders/skybox/loadModel_skybox.vs",
-        "../shaders/skybox/loadModel_skybox.fs");
-    Model ourModel("../Notes/9_LoadModels/BackpackModel/backpack.obj");
+        "../shaders/skybox/loadModel_all.fs");
+    Model ourModel("../Notes/12_Cubemaps/nanosuit/nanosuit.obj");
 
     // shaders
     Shader screenShader("../shaders/Framebuffer/framebuffer_screen.vs",
@@ -177,7 +177,7 @@ int main()
     screenShader.setInt("screenTexture", 0);
 
     modelShader.use();
-    modelShader.setInt("skybox", 10);
+    modelShader.setInt("skybox", 4);
 
     // framebuffer configuration
     // -------------------------
@@ -245,7 +245,8 @@ int main()
         // it's a bit too big for our scene, so scale it down
         model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
         modelShader.setMat4("model", model);
-        glActiveTexture(GL_TEXTURE10);
+        modelShader.setFloat("shiness", 32.0f);
+        glActiveTexture(GL_TEXTURE4);
         glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
         ourModel.Draw(modelShader);
 
