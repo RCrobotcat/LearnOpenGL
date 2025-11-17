@@ -1,3 +1,76 @@
+- `loadModel_skybox.vs`
+```glsl
+#version 330 core
+layout (location = 0) in vec3 aPos;
+layout (location = 1) in vec3 aNormal;
+layout (location = 2) in vec2 aTexCoords;
+layout (location = 3) in vec3 aTangent;
+layout (location = 4) in vec3 aBitangent;
+
+out vec3 FragPos;
+out vec2 TexCoords;
+out vec3 Tangent;
+out vec3 Bitangent;
+out mat3 TBN;
+
+uniform mat4 model;
+uniform mat4 view;
+uniform mat4 projection;
+
+void main()
+{
+    FragPos = vec3(model * vec4(aPos, 1.0));
+    TexCoords = aTexCoords;
+    Tangent = aTangent;
+    Bitangent = aBitangent;
+
+    // TBN matrix
+    vec3 T = normalize(vec3(model * vec4(aTangent, 0.0)));
+    vec3 B = normalize(vec3(model * vec4(aBitangent, 0.0)));
+    vec3 N = normalize(vec3(model * vec4(aNormal, 0.0)));
+    TBN = mat3(T, B, N);
+
+    gl_Position = projection * view * model * vec4(aPos, 1.0);
+}
+
+```
+---
+- `loadModel_skybox.fs`
+```glsl
+#version 330 core
+out vec4 FragColor;
+
+in vec3 FragPos;
+in vec2 TexCoords;
+in vec3 Tangent;
+in vec3 BiTangent;
+in mat3 TBN;
+
+uniform sampler2D texture_diffuse1;
+uniform sampler2D texture_normal1;
+uniform sampler2D texture_specular1;
+uniform float shininess;
+
+uniform vec3 cameraPos;
+uniform samplerCube skybox;
+
+void main()
+{
+    // unpack normal map
+    vec3 tangentNormal = texture(texture_normal1, TexCoords).rgb;
+    tangentNormal = tangentNormal * 2.0 - 1.0;  // [0,1] → [-1,1]
+    vec3 norm = normalize(TBN * tangentNormal);
+
+    vec3 I = normalize(FragPos - cameraPos);
+    vec3 R = reflect(I, norm);
+
+    FragColor = vec4(texture(skybox, R).rgb, 1.0);
+}
+
+```
+---
+- `main.cpp`
+```c++
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -417,3 +490,5 @@ unsigned int loadCubemap(std::vector<std::string> faces)
 
     return textureID;
 }
+
+```

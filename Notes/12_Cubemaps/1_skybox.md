@@ -1,3 +1,40 @@
+- `skybox.vs`
+```glsl
+#version 330 core
+layout (location = 0) in vec3 aPos;
+
+out vec3 TexCoords;
+
+uniform mat4 projection;
+uniform mat4 view;
+
+void main()
+{
+    TexCoords = aPos;
+    vec4 pos = projection * view * vec4(aPos, 1.0);
+    gl_Position = pos.xyww; // 让z分量(透视除法之后)永远等于1.0, 以确保天空盒总是在最远处
+}
+
+```
+---
+- `skybox.fs`
+```glsl
+#version 330 core
+out vec4 FragColor;
+
+in vec3 TexCoords;
+
+uniform samplerCube skybox;
+
+void main()
+{
+    FragColor = texture(skybox, TexCoords);
+}
+
+```
+---
+- `main.cpp`
+```c++
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -13,7 +50,6 @@
 #include <map>
 
 #include "Camera.h"
-#include "Model.h"
 #include "stb_image.h"
 
 void mouse_callback(GLFWwindow *window, double xpos, double ypos);
@@ -71,16 +107,69 @@ int main()
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetCursorPosCallback(window, mouse_callback);
 
-    // load model
-    Shader modelShader("../shaders/skybox/loadModel_skybox.vs",
-        "../shaders/skybox/loadModel_skybox.fs");
-    Model ourModel("../Notes/9_LoadModels/BackpackModel/backpack.obj");
-
     // shaders
+    Shader shader("../shaders/Tests/vertexShader_Tests.vs",
+                  "../shaders/Tests/Blending.fs");
     Shader screenShader("../shaders/Framebuffer/framebuffer_screen.vs",
                   "../shaders/Framebuffer/framebuffer_screen.fs");
     Shader skyboxShader("../shaders/skybox/skybox.vs",
                   "../shaders/skybox/skybox.fs");
+
+    float cubeVertices[] = {
+        // Back face
+        -0.5f, -0.5f, -0.5f, 0.0f, 0.0f, // Bottom-left
+        0.5f, -0.5f, -0.5f, 1.0f, 0.0f, // bottom-right
+        0.5f, 0.5f, -0.5f, 1.0f, 1.0f, // top-right
+        0.5f, 0.5f, -0.5f, 1.0f, 1.0f, // top-right
+        -0.5f, 0.5f, -0.5f, 0.0f, 1.0f, // top-left
+        -0.5f, -0.5f, -0.5f, 0.0f, 0.0f, // bottom-left
+        // Front face
+        -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, // bottom-left
+        0.5f, 0.5f, 0.5f, 1.0f, 1.0f, // top-right
+        0.5f, -0.5f, 0.5f, 1.0f, 0.0f, // bottom-right
+        0.5f, 0.5f, 0.5f, 1.0f, 1.0f, // top-right
+        -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, // bottom-left
+        -0.5f, 0.5f, 0.5f, 0.0f, 1.0f, // top-left
+        // Left face
+        -0.5f, 0.5f, 0.5f, 1.0f, 0.0f, // top-right
+        -0.5f, -0.5f, -0.5f, 0.0f, 1.0f, // bottom-left
+        -0.5f, 0.5f, -0.5f, 1.0f, 1.0f, // top-left
+        -0.5f, -0.5f, -0.5f, 0.0f, 1.0f, // bottom-left
+        -0.5f, 0.5f, 0.5f, 1.0f, 0.0f, // top-right
+        -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, // bottom-right
+        // Right face
+        0.5f, 0.5f, 0.5f, 1.0f, 0.0f, // top-left
+        0.5f, 0.5f, -0.5f, 1.0f, 1.0f, // top-right
+        0.5f, -0.5f, -0.5f, 0.0f, 1.0f, // bottom-right
+        0.5f, -0.5f, -0.5f, 0.0f, 1.0f, // bottom-right
+        0.5f, -0.5f, 0.5f, 0.0f, 0.0f, // bottom-left
+        0.5f, 0.5f, 0.5f, 1.0f, 0.0f, // top-left
+        // Bottom face
+        -0.5f, -0.5f, -0.5f, 0.0f, 1.0f, // top-right
+        0.5f, -0.5f, 0.5f, 1.0f, 0.0f, // bottom-left
+        0.5f, -0.5f, -0.5f, 1.0f, 1.0f, // top-left
+        0.5f, -0.5f, 0.5f, 1.0f, 0.0f, // bottom-left
+        -0.5f, -0.5f, -0.5f, 0.0f, 1.0f, // top-right
+        -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, // bottom-right
+        // Top face
+        -0.5f, 0.5f, -0.5f, 0.0f, 1.0f, // top-left
+        0.5f, 0.5f, -0.5f, 1.0f, 1.0f, // top-right
+        0.5f, 0.5f, 0.5f, 1.0f, 0.0f, // bottom-right
+        0.5f, 0.5f, 0.5f, 1.0f, 0.0f, // bottom-right
+        -0.5f, 0.5f, 0.5f, 0.0f, 0.0f, // bottom-left
+        -0.5f, 0.5f, -0.5f, 0.0f, 1.0f // top-left
+    };
+
+    float planeVertices[] = {
+        // positions       // texture Coords (note we set these higher than 1 (together with GL_REPEAT as texture wrapping mode). this will cause the floor texture to repeat)
+        5.0f, -0.5f, 5.0f, 2.0f, 0.0f,
+        -5.0f, -0.5f, 5.0f, 0.0f, 0.0f,
+        -5.0f, -0.5f, -5.0f, 0.0f, 2.0f,
+
+        5.0f, -0.5f, 5.0f, 2.0f, 0.0f,
+        -5.0f, -0.5f, -5.0f, 0.0f, 2.0f,
+        5.0f, -0.5f, -5.0f, 2.0f, 2.0f
+    };
 
     float quadVertices[] = { // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
         // positions   // texCoords
@@ -149,6 +238,32 @@ int main()
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *) 0);
     glBindVertexArray(0);
 
+    // cube VAO
+    unsigned int cubeVAO, cubeVBO;
+    glGenVertexArrays(1, &cubeVAO);
+    glGenBuffers(1, &cubeVBO);
+    glBindVertexArray(cubeVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), &cubeVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) 0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) (3 * sizeof(float)));
+    glBindVertexArray(0);
+
+    // plane VAO
+    unsigned int planeVAO, planeVBO;
+    glGenVertexArrays(1, &planeVAO);
+    glGenBuffers(1, &planeVBO);
+    glBindVertexArray(planeVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(planeVertices), &planeVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) 0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) (3 * sizeof(float)));
+    glBindVertexArray(0);
+
     // screen quad VAO
     unsigned int quadVAO, quadVBO;
     glGenVertexArrays(1, &quadVAO);
@@ -162,6 +277,8 @@ int main()
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
 
     // textures
+    unsigned int cubeTexture = loadTexture("../Notes/11_Culling_FrameBuffer/container.jpg");
+    unsigned int floorTexture = loadTexture("../Notes/10_DepthTest_StencilTest_Blend/metal.png");
     std::vector<std::string> faces
     {
         "../Notes/12_Cubemaps/skybox/right.jpg",
@@ -173,11 +290,11 @@ int main()
     };
     unsigned int cubemapTexture = loadCubemap(faces);
 
+    shader.use();
+    shader.setInt("texture1", 0);
+
     screenShader.use();
     screenShader.setInt("screenTexture", 0);
-
-    modelShader.use();
-    modelShader.setInt("skybox", 10);
 
     // framebuffer configuration
     // -------------------------
@@ -235,19 +352,28 @@ int main()
         glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float) SCR_WIDTH / (float) SCR_HEIGHT, 0.1f,
                                                 100.0f);
 
-        // Draw Model
-        modelShader.use();
-        modelShader.setMat4("projection", projection);
-        modelShader.setMat4("view", view);
-        modelShader.setVec3("cameraPos", camera.Position);
-        // translate it down so it's at the center of the scene
-        model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-        // it's a bit too big for our scene, so scale it down
-        model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
-        modelShader.setMat4("model", model);
-        glActiveTexture(GL_TEXTURE10);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
-        ourModel.Draw(modelShader);
+        shader.use();
+        shader.setMat4("view", view);
+        shader.setMat4("projection", projection);
+
+        // floor
+        glBindVertexArray(planeVAO);
+        glBindTexture(GL_TEXTURE_2D, floorTexture);
+        shader.setMat4("model", glm::mat4(1.0f));
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
+        // 2 cubes
+        glBindVertexArray(cubeVAO);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, cubeTexture);
+        model = glm::translate(model, glm::vec3(-1.0f, 0.0f, -1.0f));
+        shader.setMat4("model", model);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
+        shader.setMat4("model", model);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+        glBindVertexArray(0);
 
         // skybox
         // glDepthMask(GL_FALSE); // 禁用深度写入 => 这样子天空盒就会永远被绘制在其它物体的背后了
@@ -281,8 +407,12 @@ int main()
         glfwPollEvents();
     }
 
+    glDeleteVertexArrays(1, &cubeVAO);
+    glDeleteVertexArrays(1, &planeVAO);
     glDeleteVertexArrays(1, &quadVAO);
     glDeleteVertexArrays(1, &skyboxVAO);
+    glDeleteBuffers(1, &cubeVBO);
+    glDeleteBuffers(1, &planeVBO);
     glDeleteBuffers(1, &quadVBO);
     glDeleteBuffers(1, &skyboxVBO);
     glDeleteRenderbuffers(1, &rbo);
@@ -383,7 +513,7 @@ unsigned int loadTexture(char const *path)
 // -X (left)
 // +Y (top)
 // -Y (bottom)
-// +Z (front)
+// +Z (front) 
 // -Z (back)
 // -------------------------------------------------------
 unsigned int loadCubemap(std::vector<std::string> faces)
@@ -417,3 +547,5 @@ unsigned int loadCubemap(std::vector<std::string> faces)
 
     return textureID;
 }
+
+```
