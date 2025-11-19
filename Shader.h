@@ -9,12 +9,15 @@
 
 #include "glm/fwd.hpp"
 
-class Shader {
+class Shader
+{
 public:
     unsigned int ID;
 
     // constructor generates the shader on the fly
     Shader(const char *vertexPath, const char *fragmentPath);
+
+    Shader(const char *vertexPath, const char *geometryPath, const char *fragmentPath);
 
     // activate the shader
     void use();
@@ -27,6 +30,7 @@ public:
     void setFloat(const std::string &name, float value) const;
 
     void setVec3(const std::string &name, glm::vec3 vec) const;
+
     void setVec3(const std::string &name, float x, float y, float z) const;
 
     void setMat4(const std::string &name, glm::mat4 mat) const;

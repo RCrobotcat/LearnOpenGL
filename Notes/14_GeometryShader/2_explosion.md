@@ -1,3 +1,136 @@
+- `loadModel_geo_explosion.vs`
+```glsl
+#version 330 core
+layout (location = 0) in vec3 aPos;
+layout (location = 1) in vec3 aNormal;
+layout (location = 2) in vec2 aTexCoords;
+layout (location = 3) in vec3 aTangent;
+layout (location = 4) in vec3 aBitangent;
+
+out vec3 FragPos;
+out vec3 Tangent;
+out vec3 Bitangent;
+out mat3 TBN;
+
+out VS_OUT {
+    vec2 texCoords;
+} vs_out;
+
+uniform mat4 model;
+uniform mat4 view;
+uniform mat4 projection;
+
+void main()
+{
+    FragPos = vec3(model * vec4(aPos, 1.0));
+    vs_out.texCoords = aTexCoords;
+    Tangent = aTangent;
+    Bitangent = aBitangent;
+
+    // TBN matrix
+    vec3 T = normalize(vec3(model * vec4(aTangent, 0.0)));
+    vec3 B = normalize(vec3(model * vec4(aBitangent, 0.0)));
+    vec3 N = normalize(vec3(model * vec4(aNormal, 0.0)));
+    TBN = mat3(T, B, N);
+
+    gl_Position = projection * view * model * vec4(aPos, 1.0);
+}
+
+```
+---
+- `loadModel_geo_explosion.gs`
+```glsl
+#version 330 core
+layout (triangles) in;
+layout (triangle_strip, max_vertices = 3) out;
+
+in VS_OUT {
+    vec2 texCoords;
+} gs_in[];
+
+out vec2 TexCoords;
+
+uniform float time;
+
+// 仅使用我们能够访问的三角形3个顶点获取法线
+vec3 GetNormal()
+{
+   vec3 a = vec3(gl_in[0].gl_Position) - vec3(gl_in[1].gl_Position);
+   vec3 b = vec3(gl_in[2].gl_Position) - vec3(gl_in[1].gl_Position);
+   return normalize(cross(a, b));
+}
+
+vec4 explode(vec4 position, vec3 normal)
+{
+    float magnitude = 2.0;
+    vec3 direction = normal * ((sin(time) + 1.0) / 2.0) * magnitude;
+    return position + vec4(direction, 0.0);
+}
+
+void main()
+{
+    vec3 normal = GetNormal();
+
+    gl_Position = explode(gl_in[0].gl_Position, normal);
+    TexCoords = gs_in[0].texCoords;
+    EmitVertex();
+    gl_Position = explode(gl_in[1].gl_Position, normal);
+    TexCoords = gs_in[1].texCoords;
+    EmitVertex();
+    gl_Position = explode(gl_in[2].gl_Position, normal);
+    TexCoords = gs_in[2].texCoords;
+    EmitVertex();
+
+    EndPrimitive();
+}
+
+```
+---
+- `loadModel_geo_explosion.fs`
+```glsl
+#version 330 core
+out vec4 FragColor;
+
+in vec3 FragPos;
+in vec2 TexCoords;
+in vec3 Tangent;
+in vec3 BiTangent;
+in mat3 TBN;
+
+uniform sampler2D texture_diffuse1;
+uniform sampler2D texture_normal1;
+uniform sampler2D texture_specular1;
+uniform sampler2D texture_height1;
+uniform float shininess;
+
+uniform vec3 cameraPos;
+uniform samplerCube skybox;
+
+void main()
+{
+    // unpack normal map
+    vec3 tangentNormal = texture(texture_normal1, TexCoords).rgb;
+    tangentNormal = tangentNormal * 2.0 - 1.0;  // [0,1] → [-1,1]
+    vec3 norm = normalize(TBN * tangentNormal);
+
+    // reflection
+    vec3 viewDir = normalize(FragPos - cameraPos);
+    vec3 reflectDir = reflect(viewDir, norm);
+    vec3 refl = texture(skybox, reflectDir).rgb;
+    vec3 reflection = vec3(texture(texture_height1, TexCoords)) * refl;
+
+    // base color
+    vec3 albedo = texture(texture_diffuse1, TexCoords).rgb;
+
+    vec3 finalColor = albedo + reflection;
+
+    FragColor = vec4(finalColor, 1.0);
+}
+
+```
+---
+- `main.cpp`
+```c++
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -72,11 +205,9 @@ int main()
     glfwSetCursorPosCallback(window, mouse_callback);
 
     // load model
-    Shader modelShader("../shaders/GeometryShader/ShowNormal/loadModel.vs",
-                       "../shaders/GeometryShader/ShowNormal/loadModel.fs");
-    Shader showNormalShader("../shaders/GeometryShader/ShowNormal/model_showNormal.vs",
-                            "../shaders/GeometryShader/ShowNormal/model_showNormal.gs",
-                            "../shaders/GeometryShader/ShowNormal/model_showNormal.fs");
+    Shader modelShader("../shaders/GeometryShader/loadModel_geo_explosion.vs",
+                       "../shaders/GeometryShader/loadModel_geo_explosion.gs",
+                       "../shaders/GeometryShader/loadModel_geo_explosion.fs");
     Model ourModel("../Notes/12_Cubemaps/nanosuit/nanosuit.obj");
 
     // shaders
@@ -257,13 +388,6 @@ int main()
         glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
         ourModel.Draw(modelShader);
 
-        // draw normal vectors
-        showNormalShader.use();
-        showNormalShader.setMat4("projection", projection);
-        showNormalShader.setMat4("view", view);
-        showNormalShader.setMat4("model", model);
-        ourModel.Draw(showNormalShader);
-
         // skybox
         // glDepthMask(GL_FALSE); // 禁用深度写入 => 这样子天空盒就会永远被绘制在其它物体的背后了
         // change depth function so depth test passes when values are equal to depth buffer's content
@@ -433,3 +557,5 @@ unsigned int loadCubemap(std::vector<std::string> faces)
 
     return textureID;
 }
+
+```
