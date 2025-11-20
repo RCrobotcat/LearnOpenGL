@@ -24,6 +24,16 @@ public:
 
     void Draw(Shader &shader);
 
+    std::vector<Mesh> getMeshes()
+    {
+        return meshes;
+    }
+
+    std::vector<Texture> getTextures()
+    {
+        return textures_loaded;
+    }
+
 private:
     /*  模型数据  */
     std::vector<Mesh> meshes;

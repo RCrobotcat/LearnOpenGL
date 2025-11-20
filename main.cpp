@@ -32,7 +32,7 @@ const unsigned int SCR_WIDTH = 1280;
 const unsigned int SCR_HEIGHT = 720;
 
 // Camera
-Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
+Camera camera(glm::vec3(0.0f, 20.0f, 155.0f));
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
@@ -71,153 +71,76 @@ int main()
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetCursorPosCallback(window, mouse_callback);
 
-    // load model
-    Shader modelShader("../shaders/GeometryShader/ShowNormal/loadModel.vs",
-                       "../shaders/GeometryShader/ShowNormal/loadModel.fs");
-    Shader showNormalShader("../shaders/GeometryShader/ShowNormal/model_showNormal.vs",
-                            "../shaders/GeometryShader/ShowNormal/model_showNormal.gs",
-                            "../shaders/GeometryShader/ShowNormal/model_showNormal.fs");
-    Model ourModel("../Notes/12_Cubemaps/nanosuit/nanosuit.obj");
+    glEnable(GL_DEPTH_TEST);
+
+    // models
+    Model planetModel("../Notes/15_Instancing_Anti-Aliasing/Instancing/planet/planet.obj");
+    Model rockModel("../Notes/15_Instancing_Anti-Aliasing/Instancing/rock/rock.obj");
 
     // shaders
-    Shader screenShader("../shaders/Framebuffer/framebuffer_screen.vs",
-                        "../shaders/Framebuffer/framebuffer_screen.fs");
-    Shader skyboxShader("../shaders/skybox/skybox.vs",
-                        "../shaders/skybox/skybox.fs");
+    Shader planetShader("../shaders/Instancing/planet.vs", "../shaders/Instancing/planet.fs");
+    Shader asteroidsShader("../shaders/Instancing/asteroids.vs", "../shaders/Instancing/asteroids.fs");
 
-    float quadVertices[] = {
-        // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
-        // positions   // texCoords
-        -1.0f, 1.0f, 0.0f, 1.0f,
-        -1.0f, -1.0f, 0.0f, 0.0f,
-        1.0f, -1.0f, 1.0f, 0.0f,
-
-        -1.0f, 1.0f, 0.0f, 1.0f,
-        1.0f, -1.0f, 1.0f, 0.0f,
-        1.0f, 1.0f, 1.0f, 1.0f
-    };
-
-    float skyboxVertices[] = {
-        // positions
-        -1.0f, 1.0f, -1.0f,
-        -1.0f, -1.0f, -1.0f,
-        1.0f, -1.0f, -1.0f,
-        1.0f, -1.0f, -1.0f,
-        1.0f, 1.0f, -1.0f,
-        -1.0f, 1.0f, -1.0f,
-
-        -1.0f, -1.0f, 1.0f,
-        -1.0f, -1.0f, -1.0f,
-        -1.0f, 1.0f, -1.0f,
-        -1.0f, 1.0f, -1.0f,
-        -1.0f, 1.0f, 1.0f,
-        -1.0f, -1.0f, 1.0f,
-
-        1.0f, -1.0f, -1.0f,
-        1.0f, -1.0f, 1.0f,
-        1.0f, 1.0f, 1.0f,
-        1.0f, 1.0f, 1.0f,
-        1.0f, 1.0f, -1.0f,
-        1.0f, -1.0f, -1.0f,
-
-        -1.0f, -1.0f, 1.0f,
-        -1.0f, 1.0f, 1.0f,
-        1.0f, 1.0f, 1.0f,
-        1.0f, 1.0f, 1.0f,
-        1.0f, -1.0f, 1.0f,
-        -1.0f, -1.0f, 1.0f,
-
-        -1.0f, 1.0f, -1.0f,
-        1.0f, 1.0f, -1.0f,
-        1.0f, 1.0f, 1.0f,
-        1.0f, 1.0f, 1.0f,
-        -1.0f, 1.0f, 1.0f,
-        -1.0f, 1.0f, -1.0f,
-
-        -1.0f, -1.0f, -1.0f,
-        -1.0f, -1.0f, 1.0f,
-        1.0f, -1.0f, -1.0f,
-        1.0f, -1.0f, -1.0f,
-        -1.0f, -1.0f, 1.0f,
-        1.0f, -1.0f, 1.0f
-    };
-
-    // skybox VAO
-    unsigned int skyboxVAO, skyboxVBO;
-    glGenVertexArrays(1, &skyboxVAO);
-    glGenBuffers(1, &skyboxVBO);
-    glBindVertexArray(skyboxVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *) 0);
-    glBindVertexArray(0);
-
-    // screen quad VAO
-    unsigned int quadVAO, quadVBO;
-    glGenVertexArrays(1, &quadVAO);
-    glGenBuffers(1, &quadVBO);
-    glBindVertexArray(quadVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *) 0);
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *) (2 * sizeof(float)));
-
-    // textures
-    std::vector<std::string> faces
+    // 配置小行星带的实例矩阵
+    unsigned int amount = 100000;
+    glm::mat4 *modelMatrices;
+    modelMatrices = new glm::mat4[amount];
+    srand(static_cast<unsigned int>(glfwGetTime())); // 初始化随机种子
+    float radius = 150.0;
+    float offset = 25.0f;
+    for (unsigned int i = 0; i < amount; i++)
     {
-        "../Notes/12_Cubemaps/skybox/right.jpg",
-        "../Notes/12_Cubemaps/skybox/left.jpg",
-        "../Notes/12_Cubemaps/skybox/top.jpg",
-        "../Notes/12_Cubemaps/skybox/bottom.jpg",
-        "../Notes/12_Cubemaps/skybox/front.jpg",
-        "../Notes/12_Cubemaps/skybox/back.jpg"
-    };
-    unsigned int cubemapTexture = loadCubemap(faces);
+        glm::mat4 model = glm::mat4(1.0f);
+        // 1. 位移：分布在半径为 'radius' 的圆形上，偏移的范围是 [-offset, offset]
+        float angle = (float) i / (float) amount * 360.0f;
+        float displacement = (rand() % (int) (2 * offset * 100)) / 100.0f - offset;
+        float x = sin(angle) * radius + displacement;
+        displacement = (rand() % (int) (2 * offset * 100)) / 100.0f - offset;
+        float y = displacement * 0.4f; // 让行星带的高度比x和z的宽度要小
+        displacement = (rand() % (int) (2 * offset * 100)) / 100.0f - offset;
+        float z = cos(angle) * radius + displacement;
+        model = glm::translate(model, glm::vec3(x, y, z));
 
-    screenShader.use();
-    screenShader.setInt("screenTexture", 0);
+        // 2. 缩放：在 0.05 和 0.25f 之间缩放
+        float scale = static_cast<float>((rand() % 20) / 100.0 + 0.05);
+        model = glm::scale(model, glm::vec3(scale));
 
-    modelShader.use();
-    modelShader.setInt("skybox", 4);
+        // 3. 旋转：绕着一个（半）随机选择的旋转轴向量进行随机的旋转
+        float rotAngle = static_cast<float>((rand() % 360));
+        model = glm::rotate(model, rotAngle, glm::vec3(0.4f, 0.6f, 0.8f));
 
-    // framebuffer configuration
+        // 4. 添加到矩阵的数组中
+        modelMatrices[i] = model;
+    }
+
+    // configure instanced array
     // -------------------------
-    unsigned int framebuffer;
-    glGenFramebuffers(1, &framebuffer);
-    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+    unsigned int buffer;
+    glGenBuffers(1, &buffer);
+    glBindBuffer(GL_ARRAY_BUFFER, buffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::mat4) * amount, &modelMatrices[0], GL_STATIC_DRAW);
 
-    // create a color attachment texture
-    unsigned int textureColorbuffer;
-    glGenTextures(1, &textureColorbuffer);
-    glBindTexture(GL_TEXTURE_2D, textureColorbuffer);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureColorbuffer, 0);
+    for (unsigned int i = 0; i < rockModel.getMeshes().size(); i++)
+    {
+        unsigned int VAO = rockModel.getMeshes()[i].VAO;
+        glBindVertexArray(VAO);
+        // set attribute pointers for matrix (4 times vec4)
+        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void *) 0);
+        glEnableVertexAttribArray(4);
+        glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void *) (sizeof(glm::vec4)));
+        glEnableVertexAttribArray(5);
+        glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void *) (2 * sizeof(glm::vec4)));
+        glEnableVertexAttribArray(6);
+        glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void *) (3 * sizeof(glm::vec4)));
 
-    // create a renderbuffer object for depth and stencil attachment (we won't be sampling these)
-    unsigned int rbo;
-    glGenRenderbuffers(1, &rbo);
-    glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCR_WIDTH, SCR_HEIGHT);
-    // use a single renderbuffer object for both a depth AND stencil buffer.
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
-    // now actually attach it
+        glVertexAttribDivisor(3, 1);
+        glVertexAttribDivisor(4, 1);
+        glVertexAttribDivisor(5, 1);
+        glVertexAttribDivisor(6, 1);
 
-    // now that we actually created the framebuffer and added all attachments we want to check if it is actually complete now
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-        std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-    // 线框模式 GL_LINE
-    // 填充模式 GL_FILL (默认)
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-    // 深度测试
-    glEnable(GL_DEPTH_TEST);
+        glBindVertexArray(0);
+    }
 
     while (!glfwWindowShouldClose(window))
     {
@@ -227,83 +150,45 @@ int main()
 
         processInput(window);
 
-        // render
-        // ------
-        // bind to framebuffer and draw scene as we normally would to color texture
-        glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-        glEnable(GL_DEPTH_TEST); // enable depth testing (is disabled for rendering screen-space quad)
-
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        glm::mat4 model = glm::mat4(1.0f);
+        // configure transformation matrices
+        glm::mat4 projection = glm::perspective(glm::radians(45.0f),
+                                                (float) SCR_WIDTH / (float) SCR_HEIGHT, 0.1f, 1000.0f);
         glm::mat4 view = camera.GetViewMatrix();
-        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float) SCR_WIDTH / (float) SCR_HEIGHT, 0.1f,
-                                                100.0f);
+        asteroidsShader.use();
+        asteroidsShader.setMat4("projection", projection);
+        asteroidsShader.setMat4("view", view);
+        planetShader.use();
+        planetShader.setMat4("projection", projection);
+        planetShader.setMat4("view", view);
 
-        // Draw Model
-        modelShader.use();
-        modelShader.setMat4("projection", projection);
-        modelShader.setMat4("view", view);
-        modelShader.setVec3("cameraPos", camera.Position);
-        // translate it down so it's at the center of the scene
-        model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-        // it's a bit too big for our scene, so scale it down
-        model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
-        modelShader.setMat4("model", model);
-        modelShader.setFloat("shiness", 32.0f);
-        modelShader.setFloat("time", glfwGetTime());
-        glActiveTexture(GL_TEXTURE4);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
-        ourModel.Draw(modelShader);
+        // draw planet
+        glm::mat4 model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(0.0f, -3.0f, 0.0f));
+        model = glm::scale(model, glm::vec3(10.0f));
+        planetShader.setMat4("model", model);
+        planetModel.Draw(planetShader);
 
-        // draw normal vectors
-        showNormalShader.use();
-        showNormalShader.setMat4("projection", projection);
-        showNormalShader.setMat4("view", view);
-        showNormalShader.setMat4("model", model);
-        ourModel.Draw(showNormalShader);
-
-        // skybox
-        // glDepthMask(GL_FALSE); // 禁用深度写入 => 这样子天空盒就会永远被绘制在其它物体的背后了
-        // change depth function so depth test passes when values are equal to depth buffer's content
-        glDepthFunc(GL_LEQUAL);
-        skyboxShader.use();
-        // 只取左上角3x3的矩阵 => 移除观察矩阵中的位移部分, 让移动不会影响天空盒的位置向量
-        glm::mat4 view_skybox = glm::mat4(glm::mat3(camera.GetViewMatrix()));
-        skyboxShader.setMat4("view", view_skybox);
-        skyboxShader.setMat4("projection", projection);
-        glBindVertexArray(skyboxVAO);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-        glBindVertexArray(0);
-        glDepthFunc(GL_LESS);
-        // glDepthMask(GL_TRUE); // 启用深度写入
-
-        // now bind back to default framebuffer and draw a quad plane with the attached framebuffer color texture
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glDisable(GL_DEPTH_TEST); // disable depth test so screen-space quad isn't discarded due to depth test.
-        // clear all relevant buffers
-        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-        // set clear color to white (not really necessary actually, since we won't be able to see behind the quad anyways)
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        screenShader.use();
-        glBindVertexArray(quadVAO);
-        glBindTexture(GL_TEXTURE_2D, textureColorbuffer);
-        // use the color attachment texture as the texture of the quad plane
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+        // draw meteorites
+        asteroidsShader.use();
+        asteroidsShader.setInt("texture_diffuse1", 0);
+        glActiveTexture(GL_TEXTURE0);
+        // note: we also made the textures_loaded vector public (instead of private) from the model class.
+        glBindTexture(GL_TEXTURE_2D, rockModel.getTextures()[0].id);
+        for (unsigned int i = 0; i < rockModel.getMeshes().size(); i++)
+        {
+            glBindVertexArray(rockModel.getMeshes()[i].VAO);
+            glDrawElementsInstanced(GL_TRIANGLES, static_cast<unsigned int>(rockModel.getMeshes()[i].indices.size()),
+                                    GL_UNSIGNED_INT, 0, amount);
+            glBindVertexArray(0);
+        }
 
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
-    glDeleteVertexArrays(1, &quadVAO);
-    glDeleteVertexArrays(1, &skyboxVAO);
-    glDeleteBuffers(1, &quadVBO);
-    glDeleteBuffers(1, &skyboxVBO);
-    glDeleteRenderbuffers(1, &rbo);
-    glDeleteFramebuffers(1, &framebuffer);
     glfwTerminate();
     return 0;
 }
