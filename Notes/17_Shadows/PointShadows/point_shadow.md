@@ -1,3 +1,181 @@
+- `point_shadows_depth.vs`, `point_shadows_depth.gs`, `point_shadows_depth.fs`
+```glsl
+#version 330 core
+layout (location = 0) in vec3 position;
+
+uniform mat4 model;
+
+void main()
+{
+    gl_Position = model * vec4(position, 1.0);
+}
+
+```
+```glsl
+#version 330 core
+layout (triangles) in;
+layout (triangle_strip, max_vertices = 18) out;
+
+uniform mat4 shadowMatrices[6];
+
+out vec4 FragPos; // FragPos from GS (output per emitvertex)
+
+void main()
+{
+    for(int face = 0; face < 6; ++face)
+    {
+        gl_Layer = face; // built-in variable that specifies to which face we render.
+        for(int i = 0; i < 3; ++i) // for each triangle's vertices
+        {
+            FragPos = gl_in[i].gl_Position;
+            gl_Position = shadowMatrices[face] * FragPos;
+            EmitVertex();
+        }
+        EndPrimitive();
+    }
+}
+
+```
+```glsl
+#version 330 core
+in vec4 FragPos;
+
+uniform vec3 lightPos;
+uniform float far_plane;
+
+void main()
+{
+    // get distance between fragment and light source
+    float lightDistance = length(FragPos.xyz - lightPos);
+
+    // map to [0;1] range by dividing by far_plane
+    lightDistance = lightDistance / far_plane;
+
+    // write this as modified depth
+    gl_FragDepth = lightDistance;
+}
+
+```
+---
+- `pointShadow.vs`, `pointShadow.fs`
+```glsl
+#version 330 core
+layout (location = 0) in vec3 position;
+layout (location = 1) in vec3 normal;
+layout (location = 2) in vec2 texCoords;
+
+out vec2 TexCoords;
+
+out VS_OUT {
+    vec3 FragPos;
+    vec3 Normal;
+    vec2 TexCoords;
+} vs_out;
+
+uniform mat4 projection;
+uniform mat4 view;
+uniform mat4 model;
+
+uniform bool reverse_normals;
+
+void main()
+{
+    gl_Position = projection * view * model * vec4(position, 1.0f);
+    vs_out.FragPos = vec3(model * vec4(position, 1.0));
+    if(reverse_normals) // A slight hack to make sure the outer large cube displays lighting from the 'inside' instead of the default 'outside'.
+        vs_out.Normal = transpose(inverse(mat3(model))) * (-1.0 * normal);
+    else
+        vs_out.Normal = transpose(inverse(mat3(model))) * normal;
+    vs_out.TexCoords = texCoords;
+}
+
+```
+```glsl
+#version 330 core
+out vec4 FragColor;
+
+in VS_OUT {
+    vec3 FragPos;
+    vec3 Normal;
+    vec2 TexCoords;
+} fs_in;
+
+uniform sampler2D diffuseTexture;
+uniform samplerCube depthMap;
+
+uniform vec3 lightPos;
+uniform vec3 viewPos;
+
+uniform float far_plane;
+uniform bool shadows;
+
+
+float ShadowCalculation(vec3 fragPos)
+{
+    // Get vector between fragment position and light position
+    vec3 fragToLight = fragPos - lightPos;
+    // Now get current linear depth as the length between the fragment and light position
+    float currentDepth = length(fragToLight);
+
+    // Now test for shadows
+    // PCF
+    vec3 sampleOffsetDirections[20] = vec3[]
+    (
+       vec3( 1,  1,  1), vec3( 1, -1,  1), vec3(-1, -1,  1), vec3(-1,  1,  1),
+       vec3( 1,  1, -1), vec3( 1, -1, -1), vec3(-1, -1, -1), vec3(-1,  1, -1),
+       vec3( 1,  1,  0), vec3( 1, -1,  0), vec3(-1, -1,  0), vec3(-1,  1,  0),
+       vec3( 1,  0,  1), vec3(-1,  0,  1), vec3( 1,  0, -1), vec3(-1,  0, -1),
+       vec3( 0,  1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0,  1, -1)
+    );
+    float shadow = 0.0;
+    float bias = 0.15;
+    int samples = 20;
+    float viewDistance = length(viewPos - fragPos);
+    float diskRadius = (1.0 + (viewDistance / far_plane)) / 25.0; // 当距离更远的时候阴影更柔和，更近了就更锐利
+    for(int i = 0; i < samples; ++i)
+    {
+        // Use the fragment to light vector to sample from the depth map
+        float closestDepth = texture(depthMap, fragToLight + sampleOffsetDirections[i] * diskRadius).r;
+        closestDepth *= far_plane;   // Undo mapping [0;1]
+        if(currentDepth - bias > closestDepth)
+            shadow += 1.0;
+
+        //FragColor = vec4(vec3(closestDepth / far_plane), 1.0);
+    }
+    shadow /= float(samples);
+
+    return shadow;
+}
+
+void main()
+{
+    vec3 color = texture(diffuseTexture, fs_in.TexCoords).rgb;
+    vec3 normal = normalize(fs_in.Normal);
+    vec3 lightColor = vec3(0.3);
+    // Ambient
+    vec3 ambient = 0.3 * color;
+    // Diffuse
+    vec3 lightDir = normalize(lightPos - fs_in.FragPos);
+    float diff = max(dot(lightDir, normal), 0.0);
+    vec3 diffuse = diff * lightColor;
+    // Specular
+    vec3 viewDir = normalize(viewPos - fs_in.FragPos);
+    vec3 reflectDir = reflect(-lightDir, normal);
+    float spec = 0.0;
+    vec3 halfwayDir = normalize(lightDir + viewDir);
+    spec = pow(max(dot(normal, halfwayDir), 0.0), 64.0);
+    vec3 specular = spec * lightColor;
+    // Calculate shadow
+    float shadow = shadows ? ShadowCalculation(fs_in.FragPos) : 0.0;
+    vec3 lighting = (ambient + (1.0 - shadow) * (diffuse + specular)) * color;
+
+    FragColor = vec4(lighting, 1.0f);
+}
+
+```
+---
+- `main.cpp`
+```c++
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -416,3 +594,5 @@ unsigned int loadTexture(char const *path, bool gammaCorrection)
 
     return textureID;
 }
+
+```
