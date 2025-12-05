@@ -1,3 +1,204 @@
+- `bloom.vs`, `bloom.fs`, `lightbox.fs`
+```glsl
+#version 330 core
+layout (location = 0) in vec3 aPos;
+layout (location = 1) in vec3 aNormal;
+layout (location = 2) in vec2 aTexCoords;
+
+out VS_OUT {
+    vec3 FragPos;
+    vec3 Normal;
+    vec2 TexCoords;
+} vs_out;
+
+uniform mat4 projection;
+uniform mat4 view;
+uniform mat4 model;
+
+void main()
+{
+    vs_out.FragPos = vec3(model * vec4(aPos, 1.0));
+    vs_out.TexCoords = aTexCoords;
+
+    mat3 normalMatrix = transpose(inverse(mat3(model)));
+    vs_out.Normal = normalize(normalMatrix * aNormal);
+
+    gl_Position = projection * view * model * vec4(aPos, 1.0);
+}
+
+```
+```glsl
+#version 330 core
+layout (location = 0) out vec4 FragColor;
+layout (location = 1) out vec4 BrightColor;
+
+in VS_OUT {
+    vec3 FragPos;
+    vec3 Normal;
+    vec2 TexCoords;
+} fs_in;
+
+struct Light {
+    vec3 Position;
+    vec3 Color;
+};
+
+uniform Light lights[4];
+uniform sampler2D diffuseTexture;
+uniform vec3 viewPos;
+
+void main()
+{
+    vec3 color = texture(diffuseTexture, fs_in.TexCoords).rgb;
+    vec3 normal = normalize(fs_in.Normal);
+    // ambient
+    vec3 ambient = 0.0 * color;
+    // lighting
+    vec3 lighting = vec3(0.0);
+    vec3 viewDir = normalize(viewPos - fs_in.FragPos);
+    for(int i = 0; i < 4; i++)
+    {
+        // diffuse
+        vec3 lightDir = normalize(lights[i].Position - fs_in.FragPos);
+        float diff = max(dot(lightDir, normal), 0.0);
+        vec3 result = lights[i].Color * diff * color;
+        // attenuation (use quadratic as we have gamma correction)
+        float distance = length(fs_in.FragPos - lights[i].Position);
+        result *= 1.0 / (distance * distance);
+        lighting += result;
+
+    }
+    vec3 result = ambient + lighting;
+    // check whether result is higher than some threshold, if so, output as bloom threshold color
+    float brightness = dot(result, vec3(0.2126, 0.7152, 0.0722));
+    if(brightness > 1.0)
+        BrightColor = vec4(result, 1.0);
+    else
+        BrightColor = vec4(0.0, 0.0, 0.0, 1.0);
+    FragColor = vec4(result, 1.0);
+}
+
+```
+```glsl
+#version 330 core
+layout (location = 0) out vec4 FragColor;
+layout (location = 1) out vec4 BrightColor;
+
+in VS_OUT {
+    vec3 FragPos;
+    vec3 Normal;
+    vec2 TexCoords;
+} fs_in;
+
+uniform vec3 lightColor;
+
+void main()
+{
+    FragColor = vec4(lightColor, 1.0);
+    float brightness = dot(FragColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+    if(brightness > 1.0)
+        BrightColor = vec4(FragColor.rgb, 1.0);
+	else
+		BrightColor = vec4(0.0, 0.0, 0.0, 1.0);
+}
+
+```
+---
+- `blur.vs`, `blur.fs`
+```glsl
+#version 330 core
+layout (location = 0) in vec3 aPos;
+layout (location = 1) in vec2 aTexCoords;
+
+out vec2 TexCoords;
+
+void main()
+{
+    TexCoords = aTexCoords;
+    gl_Position = vec4(aPos, 1.0);
+}
+
+```
+```glsl
+#version 330 core
+out vec4 FragColor;
+
+in vec2 TexCoords;
+
+uniform sampler2D image;
+
+uniform bool horizontal;
+uniform float weight[5] = float[] (0.2270270270, 0.1945945946, 0.1216216216, 0.0540540541, 0.0162162162);
+
+void main()
+{
+     vec2 tex_offset = 1.0 / textureSize(image, 0); // gets size of single texel
+     vec3 result = texture(image, TexCoords).rgb * weight[0];
+     if(horizontal)
+     {
+         for(int i = 1; i < 5; ++i)
+         {
+            result += texture(image, TexCoords + vec2(tex_offset.x * i, 0.0)).rgb * weight[i];
+            result += texture(image, TexCoords - vec2(tex_offset.x * i, 0.0)).rgb * weight[i];
+         }
+     }
+     else
+     {
+         for(int i = 1; i < 5; ++i)
+         {
+             result += texture(image, TexCoords + vec2(0.0, tex_offset.y * i)).rgb * weight[i];
+             result += texture(image, TexCoords - vec2(0.0, tex_offset.y * i)).rgb * weight[i];
+         }
+     }
+     FragColor = vec4(result, 1.0);
+}
+
+```
+---
+- `bloom_final.vs`, `bloom_final.fs`
+```glsl
+#version 330 core
+layout (location = 0) in vec3 aPos;
+layout (location = 1) in vec2 aTexCoords;
+
+out vec2 TexCoords;
+
+void main()
+{
+    TexCoords = aTexCoords;
+    gl_Position = vec4(aPos, 1.0);
+}
+
+```
+```glsl
+#version 330 core
+out vec4 FragColor;
+
+in vec2 TexCoords;
+
+uniform sampler2D scene;
+uniform sampler2D bloomBlur;
+uniform bool bloom;
+uniform float exposure;
+
+void main()
+{
+    const float gamma = 2.2;
+    vec3 hdrColor = texture(scene, TexCoords).rgb;
+    vec3 bloomColor = texture(bloomBlur, TexCoords).rgb;
+    if(bloom)
+        hdrColor += bloomColor; // additive blending
+    // tone mapping
+    vec3 result = vec3(1.0) - exp(-hdrColor * exposure);
+    // also gamma correct while we're at it
+    result = pow(result, vec3(1.0 / gamma));
+    FragColor = vec4(result, 1.0);
+}
+
+```
+---
+- `main.cpp`
+```c++
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -502,3 +703,5 @@ unsigned int loadTexture(char const *path, bool gammaCorrection) {
 
     return textureID;
 }
+
+```
