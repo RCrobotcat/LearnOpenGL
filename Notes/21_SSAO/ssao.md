@@ -777,3 +777,21 @@ void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
 }
 
 ```
+---
+- `Camera.h`
+
+```c++
+// ...
+
+// Default camera values
+// Yaw: -132.1 Pitch: -30.4
+// default: -90.0f, 0.0f
+const float YAW = -132.1f;
+const float PITCH = -30.4;
+const float SPEED = 2.5f;
+const float SENSITIVITY = 0.1f;
+const float ZOOM = 45.0f;
+
+// ...
+
+```
