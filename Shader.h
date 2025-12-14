@@ -35,6 +35,8 @@ public:
 
     void setMat4(const std::string &name, glm::mat4 mat) const;
 
+    void setMat3(const std::string &name, glm::mat3 mat) const;
+
     // utility function for checking shader compilation/linking errors.
     void checkCompileErrors(unsigned int shader, std::string type);
 
