@@ -406,7 +406,7 @@ void framebuffer_size_callback(GLFWwindow *window, int width, int height)
 
 ```
 ---
-- vertexShader.vs
+- `vertexShader.vs`
 ```glsl
 #version 330 core
 layout (location = 0) in vec3 aPos;
