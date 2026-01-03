@@ -36,8 +36,8 @@ void renderCube();
 
 void renderQuad();
 
-const unsigned int SCR_WIDTH = 1280;
-const unsigned int SCR_HEIGHT = 720;
+const unsigned int SCR_WIDTH = 1920;
+const unsigned int SCR_HEIGHT = 1080;
 
 // Camera
 Camera camera(glm::vec3(5.0f, 5.0f, 5.0f));
@@ -92,8 +92,8 @@ int main() {
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsLight();
 
-    // ImGui::GetStyle().WindowMinSize = ImVec2(300, 100);
-    // ImGui::GetStyle().FontSizeBase = 30.0f;
+    ImGui::GetStyle().WindowMinSize = ImVec2(350, 150);
+    ImGui::GetStyle().FontSizeBase = 30.0f;
 
     // Setup Platform/Renderer backends
     const char *glsl_version = "#version 330";
@@ -375,9 +375,29 @@ int main() {
         // ImGui window: Stats
         {
             ImGui::Begin("Stats");
-            float fps = (deltaTime > 0.0f) ? (1.0f / deltaTime) : 0.0f;
-            ImGui::Text("FPS: %.1f", fps);
-            ImGui::Text("Frame time: %.3f ms", deltaTime * 1000.0f);
+
+            static float timeAccumulator = 0.0f;
+            static int frameCount = 0;
+            static float displayedFPS = 0.0f;
+            static float displayedFrameTime = 0.0f;
+
+            timeAccumulator += deltaTime;
+            frameCount++;
+
+            // 每 0.5 秒更新一次 FPS
+            if (timeAccumulator >= 0.5f) {
+                displayedFPS = frameCount / timeAccumulator;
+                displayedFrameTime = (displayedFPS > 0.0f)
+                                     ? (1000.0f / displayedFPS)
+                                     : 0.0f;
+
+                timeAccumulator = 0.0f;
+                frameCount = 0;
+            }
+
+            ImGui::Text("FPS: %.1f", displayedFPS);
+            ImGui::Text("Frame time: %.3f ms", displayedFrameTime);
+
             ImGui::End();
         }
 
