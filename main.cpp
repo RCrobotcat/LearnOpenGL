@@ -38,8 +38,8 @@ void renderQuad();
 
 unsigned int loadTexture(const char *path);
 
-const unsigned int SCR_WIDTH = 1920;
-const unsigned int SCR_HEIGHT = 1080;
+const unsigned int SCR_WIDTH = 1280;
+const unsigned int SCR_HEIGHT = 720;
 
 // Camera
 Camera camera(glm::vec3(5.0f, 5.0f, 5.0f));
@@ -50,11 +50,8 @@ bool firstMouse = true;
 float deltaTime = 0.0f; // 当前帧与上一帧的时间差
 float lastFrame = 0.0f; // 上一帧的时间
 
-float ourLerp(float a, float b, float f) {
-    return a + f * (b - a);
-}
-
-int main() {
+int main()
+{
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -65,7 +62,8 @@ int main() {
 #endif
 
     GLFWwindow *window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
-    if (window == NULL) {
+    if (window == NULL)
+    {
         std::cout << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
         return -1;
@@ -74,7 +72,8 @@ int main() {
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetScrollCallback(window, scroll_callback);
 
-    if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
+    if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress))
+    {
         std::cout << "Failed to initialize GLAD" << std::endl;
         return -1;
     }
@@ -94,8 +93,8 @@ int main() {
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsLight();
 
-    ImGui::GetStyle().WindowMinSize = ImVec2(350, 150);
-    ImGui::GetStyle().FontSizeBase = 30.0f;
+    // ImGui::GetStyle().WindowMinSize = ImVec2(350, 150);
+    // ImGui::GetStyle().FontSizeBase = 30.0f;
 
     // Setup Platform/Renderer backends
     const char *glsl_version = "#version 330";
@@ -116,13 +115,16 @@ int main() {
     // diffuse
     Shader irradianceShader("../shaders/PBR/IBL/cubemap.vs",
                             "../shaders/PBR/IBL/irradiance_convolution.fs");
-    //specular
+    // specular
     Shader prefilterShader("../shaders/PBR/IBL/cubemap.vs",
                            "../shaders/PBR/IBL/prefilter.fs");
     Shader brdfShader("../shaders/PBR/IBL/brdf.vs",
-                      "../shaders/PBR/IBL/brdf.fs");
+                      "../shaders/PBR/IBL/brdf.fs"); // use to precompute the BRDF look-up texture
 
     Shader backgroundShader("../shaders/PBR/IBL/background.vs", "../shaders/PBR/IBL/background.fs");
+
+    // model
+    Model gunModel("../Notes/23_IBL/model/Cerberus_by_Andrew_Maximov/Cerberus_LP.FBX");
 
     pbrShader.use();
     pbrShader.setInt("irradianceMap", 0);
@@ -174,19 +176,31 @@ int main() {
     unsigned int wallRoughnessMap = loadTexture("../Notes/23_IBL/Textures/wall/roughness.png");
     unsigned int wallAOMap = loadTexture("../Notes/23_IBL/Textures/wall/ao.png");
 
+    // model
+    unsigned int modelAlbedoMap = loadTexture(
+        "../Notes/23_IBL/model/Cerberus_by_Andrew_Maximov/Textures/Cerberus_A.tga");
+    unsigned int modelNormalMap = loadTexture(
+        "../Notes/23_IBL/model/Cerberus_by_Andrew_Maximov/Textures/Cerberus_N.tga");
+    unsigned int modelMetallicMap = loadTexture(
+        "../Notes/23_IBL/model/Cerberus_by_Andrew_Maximov/Textures/Cerberus_M.tga");
+    unsigned int modelRoughnessMap = loadTexture(
+        "../Notes/23_IBL/model/Cerberus_by_Andrew_Maximov/Textures/Cerberus_R.tga");
+    unsigned int modelAOMap = loadTexture(
+        "../Notes/23_IBL/model/Cerberus_by_Andrew_Maximov/Textures/Raw/Cerberus_AO.tga");
+
     // lights
     // ------
     glm::vec3 lightPositions[] = {
-            glm::vec3(-10.0f, 10.0f, 10.0f),
-            glm::vec3(10.0f, 10.0f, 10.0f),
-            glm::vec3(-10.0f, -10.0f, 10.0f),
-            glm::vec3(10.0f, -10.0f, 10.0f),
+        glm::vec3(-10.0f, 10.0f, 10.0f),
+        glm::vec3(10.0f, 10.0f, 10.0f),
+        glm::vec3(-10.0f, -10.0f, 10.0f),
+        glm::vec3(10.0f, -10.0f, 10.0f),
     };
     glm::vec3 lightColors[] = {
-            glm::vec3(300.0f, 300.0f, 300.0f),
-            glm::vec3(300.0f, 300.0f, 300.0f),
-            glm::vec3(300.0f, 300.0f, 300.0f),
-            glm::vec3(300.0f, 300.0f, 300.0f)
+        glm::vec3(300.0f, 300.0f, 300.0f),
+        glm::vec3(300.0f, 300.0f, 300.0f),
+        glm::vec3(300.0f, 300.0f, 300.0f),
+        glm::vec3(300.0f, 300.0f, 300.0f)
     };
 
     // pbr: setup framebuffer
@@ -208,7 +222,8 @@ int main() {
     float *data = stbi_loadf("../Notes/23_IBL/newport_loft.hdr",
                              &width, &height, &nrComponents, 0);
     unsigned int hdrTexture;
-    if (data) {
+    if (data)
+    {
         glGenTextures(1, &hdrTexture);
         glBindTexture(GL_TEXTURE_2D, hdrTexture);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGB, GL_FLOAT,
@@ -220,7 +235,8 @@ int main() {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
         stbi_image_free(data);
-    } else {
+    } else
+    {
         std::cout << "Failed to load HDR image." << std::endl;
     }
 
@@ -229,7 +245,8 @@ int main() {
     unsigned int envCubemap;
     glGenTextures(1, &envCubemap);
     glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap);
-    for (unsigned int i = 0; i < 6; ++i) {
+    for (unsigned int i = 0; i < 6; ++i)
+    {
         glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, 512, 512, 0, GL_RGB, GL_FLOAT, nullptr);
     }
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -243,16 +260,16 @@ int main() {
     // ----------------------------------------------------------------------------------------------
     glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
     glm::mat4 captureViews[] =
-            {
-                    glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
-                    glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f, 0.0f, 0.0f),
-                                glm::vec3(0.0f, -1.0f, 0.0f)),
-                    glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
-                    glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f),
-                                glm::vec3(0.0f, 0.0f, -1.0f)),
-                    glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
-                    glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f))
-            };
+    {
+        glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
+        glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f, 0.0f, 0.0f),
+                    glm::vec3(0.0f, -1.0f, 0.0f)),
+        glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
+        glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f),
+                    glm::vec3(0.0f, 0.0f, -1.0f)),
+        glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
+        glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f))
+    };
 
     // pbr: convert HDR equirectangular environment map to cubemap equivalent
     // ----------------------------------------------------------------------
@@ -264,7 +281,8 @@ int main() {
 
     glViewport(0, 0, 512, 512); // don't forget to configure the viewport to the capture dimensions.
     glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
-    for (unsigned int i = 0; i < 6; ++i) {
+    for (unsigned int i = 0; i < 6; ++i)
+    {
         equirectangularToCubemapShader.setMat4("view", captureViews[i]);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, envCubemap, 0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -282,7 +300,8 @@ int main() {
     unsigned int irradianceMap;
     glGenTextures(1, &irradianceMap);
     glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceMap);
-    for (unsigned int i = 0; i < 6; ++i) {
+    for (unsigned int i = 0; i < 6; ++i)
+    {
         glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, 32, 32, 0, GL_RGB, GL_FLOAT, nullptr);
     }
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -305,7 +324,8 @@ int main() {
 
     glViewport(0, 0, 32, 32); // don't forget to configure the viewport to the capture dimensions.
     glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
-    for (unsigned int i = 0; i < 6; ++i) {
+    for (unsigned int i = 0; i < 6; ++i)
+    {
         irradianceShader.setMat4("view", captureViews[i]);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, irradianceMap,
                                0);
@@ -320,7 +340,8 @@ int main() {
     unsigned int prefilterMap;
     glGenTextures(1, &prefilterMap);
     glBindTexture(GL_TEXTURE_CUBE_MAP, prefilterMap);
-    for (unsigned int i = 0; i < 6; ++i) {
+    for (unsigned int i = 0; i < 6; ++i)
+    {
         glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, 128, 128, 0, GL_RGB, GL_FLOAT, nullptr);
     }
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -342,7 +363,8 @@ int main() {
 
     glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
     unsigned int maxMipLevels = 5;
-    for (unsigned int mip = 0; mip < maxMipLevels; ++mip) {
+    for (unsigned int mip = 0; mip < maxMipLevels; ++mip)
+    {
         // reisze framebuffer according to mip-level size.
         unsigned int mipWidth = static_cast<unsigned int>(128 * std::pow(0.5, mip));
         unsigned int mipHeight = static_cast<unsigned int>(128 * std::pow(0.5, mip));
@@ -352,7 +374,8 @@ int main() {
 
         float roughness = (float) mip / (float) (maxMipLevels - 1);
         prefilterShader.setFloat("roughness", roughness);
-        for (unsigned int i = 0; i < 6; ++i) {
+        for (unsigned int i = 0; i < 6; ++i)
+        {
             prefilterShader.setMat4("view", captureViews[i]);
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
                                    prefilterMap, mip);
@@ -406,7 +429,8 @@ int main() {
     glViewport(0, 0, scrWidth, scrHeight);
 
 
-    while (!glfwWindowShouldClose(window)) {
+    while (!glfwWindowShouldClose(window))
+    {
         // Start the Dear ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -426,11 +450,12 @@ int main() {
             frameCount++;
 
             // 每 0.5 秒更新一次 FPS
-            if (timeAccumulator >= 0.5f) {
+            if (timeAccumulator >= 0.5f)
+            {
                 displayedFPS = frameCount / timeAccumulator;
                 displayedFrameTime = (displayedFPS > 0.0f)
-                                     ? (1000.0f / displayedFPS)
-                                     : 0.0f;
+                                         ? (1000.0f / displayedFPS)
+                                         : 0.0f;
 
                 timeAccumulator = 0.0f;
                 frameCount = 0;
@@ -557,10 +582,32 @@ int main() {
         pbrShader.setMat3("normalMatrix", glm::transpose(glm::inverse(glm::mat3(model))));
         renderSphere();
 
+        // gun model
+        glActiveTexture(GL_TEXTURE3);
+        glBindTexture(GL_TEXTURE_2D, modelAlbedoMap);
+        glActiveTexture(GL_TEXTURE4);
+        glBindTexture(GL_TEXTURE_2D, modelNormalMap);
+        glActiveTexture(GL_TEXTURE5);
+        glBindTexture(GL_TEXTURE_2D, modelMetallicMap);
+        glActiveTexture(GL_TEXTURE6);
+        glBindTexture(GL_TEXTURE_2D, modelRoughnessMap);
+        glActiveTexture(GL_TEXTURE7);
+        glBindTexture(GL_TEXTURE_2D, modelAOMap);
+
+        glm::mat4 m = glm::mat4(1.0f);
+        m = glm::translate(m, glm::vec3(0.0f, 0.0f, 10.0f));
+        m = glm::scale(m, glm::vec3(0.3f));
+        m = glm::rotate(m, glm::radians(-90.0f), glm::vec3(1,0,0));
+        m = glm::rotate(m, glm::radians(90.0f), glm::vec3(0,0,1));
+        pbrShader.setMat4("model", m);
+        pbrShader.setMat3("normalMatrix", glm::transpose(glm::inverse(glm::mat3(m))));
+        gunModel.Draw(pbrShader);
+
         // render light source (simply re-render sphere at light positions)
         // this looks a bit off as we use the same shader, but it'll make their positions obvious and
         // keeps the codeprint small.
-        for (unsigned int i = 0; i < sizeof(lightPositions) / sizeof(lightPositions[0]); ++i) {
+        for (unsigned int i = 0; i < sizeof(lightPositions) / sizeof(lightPositions[0]); ++i)
+        {
             glm::vec3 newPos = lightPositions[i] + glm::vec3(sin(glfwGetTime() * 5.0) * 5.0, 0.0, 0.0);
             newPos = lightPositions[i];
             pbrShader.setVec3("lightPositions[" + std::to_string(i) + "]", newPos);
@@ -607,8 +654,10 @@ int main() {
 unsigned int sphereVAO = 0;
 unsigned int indexCount;
 
-void renderSphere() {
-    if (sphereVAO == 0) {
+void renderSphere()
+{
+    if (sphereVAO == 0)
+    {
         glGenVertexArrays(1, &sphereVAO);
 
         unsigned int vbo, ebo;
@@ -623,8 +672,10 @@ void renderSphere() {
         const unsigned int X_SEGMENTS = 64;
         const unsigned int Y_SEGMENTS = 64;
         const float PI = 3.14159265359f;
-        for (unsigned int x = 0; x <= X_SEGMENTS; ++x) {
-            for (unsigned int y = 0; y <= Y_SEGMENTS; ++y) {
+        for (unsigned int x = 0; x <= X_SEGMENTS; ++x)
+        {
+            for (unsigned int y = 0; y <= Y_SEGMENTS; ++y)
+            {
                 float xSegment = (float) x / (float) X_SEGMENTS;
                 float ySegment = (float) y / (float) Y_SEGMENTS;
                 float xPos = std::cos(xSegment * 2.0f * PI) * std::sin(ySegment * PI);
@@ -638,15 +689,19 @@ void renderSphere() {
         }
 
         bool oddRow = false;
-        for (unsigned int y = 0; y < Y_SEGMENTS; ++y) {
+        for (unsigned int y = 0; y < Y_SEGMENTS; ++y)
+        {
             if (!oddRow) // even rows: y == 0, y == 2; and so on
             {
-                for (unsigned int x = 0; x <= X_SEGMENTS; ++x) {
+                for (unsigned int x = 0; x <= X_SEGMENTS; ++x)
+                {
                     indices.push_back(y * (X_SEGMENTS + 1) + x);
                     indices.push_back((y + 1) * (X_SEGMENTS + 1) + x);
                 }
-            } else {
-                for (int x = X_SEGMENTS; x >= 0; --x) {
+            } else
+            {
+                for (int x = X_SEGMENTS; x >= 0; --x)
+                {
                     indices.push_back((y + 1) * (X_SEGMENTS + 1) + x);
                     indices.push_back(y * (X_SEGMENTS + 1) + x);
                 }
@@ -656,16 +711,19 @@ void renderSphere() {
         indexCount = static_cast<unsigned int>(indices.size());
 
         std::vector<float> data;
-        for (unsigned int i = 0; i < positions.size(); ++i) {
+        for (unsigned int i = 0; i < positions.size(); ++i)
+        {
             data.push_back(positions[i].x);
             data.push_back(positions[i].y);
             data.push_back(positions[i].z);
-            if (normals.size() > 0) {
+            if (normals.size() > 0)
+            {
                 data.push_back(normals[i].x);
                 data.push_back(normals[i].y);
                 data.push_back(normals[i].z);
             }
-            if (uv.size() > 0) {
+            if (uv.size() > 0)
+            {
                 data.push_back(uv[i].x);
                 data.push_back(uv[i].y);
             }
@@ -693,52 +751,54 @@ void renderSphere() {
 unsigned int cubeVAO = 0;
 unsigned int cubeVBO = 0;
 
-void renderCube() {
+void renderCube()
+{
     // initialize (if necessary)
-    if (cubeVAO == 0) {
+    if (cubeVAO == 0)
+    {
         float vertices[] = {
-                // back face
-                -1.0f, -1.0f, -1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, // bottom-left
-                1.0f, 1.0f, -1.0f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f, // top-right
-                1.0f, -1.0f, -1.0f, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, // bottom-right
-                1.0f, 1.0f, -1.0f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f, // top-right
-                -1.0f, -1.0f, -1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, // bottom-left
-                -1.0f, 1.0f, -1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f, // top-left
-                // front face
-                -1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, // bottom-left
-                1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, // bottom-right
-                1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, // top-right
-                1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, // top-right
-                -1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, // top-left
-                -1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, // bottom-left
-                // left face
-                -1.0f, 1.0f, 1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f, // top-right
-                -1.0f, 1.0f, -1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f, // top-left
-                -1.0f, -1.0f, -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f, // bottom-left
-                -1.0f, -1.0f, -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f, // bottom-left
-                -1.0f, -1.0f, 1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, // bottom-right
-                -1.0f, 1.0f, 1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f, // top-right
-                // right face
-                1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, // top-left
-                1.0f, -1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, // bottom-right
-                1.0f, 1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, // top-right
-                1.0f, -1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, // bottom-right
-                1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, // top-left
-                1.0f, -1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, // bottom-left
-                // bottom face
-                -1.0f, -1.0f, -1.0f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f, // top-right
-                1.0f, -1.0f, -1.0f, 0.0f, -1.0f, 0.0f, 1.0f, 1.0f, // top-left
-                1.0f, -1.0f, 1.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f, // bottom-left
-                1.0f, -1.0f, 1.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f, // bottom-left
-                -1.0f, -1.0f, 1.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, // bottom-right
-                -1.0f, -1.0f, -1.0f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f, // top-right
-                // top face
-                -1.0f, 1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, // top-left
-                1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, // bottom-right
-                1.0f, 1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, // top-right
-                1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, // bottom-right
-                -1.0f, 1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, // top-left
-                -1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f // bottom-left
+            // back face
+            -1.0f, -1.0f, -1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, // bottom-left
+            1.0f, 1.0f, -1.0f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f, // top-right
+            1.0f, -1.0f, -1.0f, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, // bottom-right
+            1.0f, 1.0f, -1.0f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f, // top-right
+            -1.0f, -1.0f, -1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, // bottom-left
+            -1.0f, 1.0f, -1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f, // top-left
+            // front face
+            -1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, // bottom-left
+            1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, // bottom-right
+            1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, // top-right
+            1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, // top-right
+            -1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, // top-left
+            -1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, // bottom-left
+            // left face
+            -1.0f, 1.0f, 1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f, // top-right
+            -1.0f, 1.0f, -1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f, // top-left
+            -1.0f, -1.0f, -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f, // bottom-left
+            -1.0f, -1.0f, -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f, // bottom-left
+            -1.0f, -1.0f, 1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, // bottom-right
+            -1.0f, 1.0f, 1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f, // top-right
+            // right face
+            1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, // top-left
+            1.0f, -1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, // bottom-right
+            1.0f, 1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, // top-right
+            1.0f, -1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, // bottom-right
+            1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, // top-left
+            1.0f, -1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, // bottom-left
+            // bottom face
+            -1.0f, -1.0f, -1.0f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f, // top-right
+            1.0f, -1.0f, -1.0f, 0.0f, -1.0f, 0.0f, 1.0f, 1.0f, // top-left
+            1.0f, -1.0f, 1.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f, // bottom-left
+            1.0f, -1.0f, 1.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f, // bottom-left
+            -1.0f, -1.0f, 1.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, // bottom-right
+            -1.0f, -1.0f, -1.0f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f, // top-right
+            // top face
+            -1.0f, 1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, // top-left
+            1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, // bottom-right
+            1.0f, 1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, // top-right
+            1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, // bottom-right
+            -1.0f, 1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, // top-left
+            -1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f // bottom-left
         };
         glGenVertexArrays(1, &cubeVAO);
         glGenBuffers(1, &cubeVBO);
@@ -767,14 +827,16 @@ void renderCube() {
 unsigned int quadVAO = 0;
 unsigned int quadVBO;
 
-void renderQuad() {
-    if (quadVAO == 0) {
+void renderQuad()
+{
+    if (quadVAO == 0)
+    {
         float quadVertices[] = {
-                // positions        // texture Coords
-                -1.0f, 1.0f, 0.0f, 0.0f, 1.0f,
-                -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
-                1.0f, 1.0f, 0.0f, 1.0f, 1.0f,
-                1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+            // positions        // texture Coords
+            -1.0f, 1.0f, 0.0f, 0.0f, 1.0f,
+            -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+            1.0f, 1.0f, 0.0f, 1.0f, 1.0f,
+            1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
         };
         // setup plane VAO
         glGenVertexArrays(1, &quadVAO);
@@ -792,7 +854,8 @@ void renderQuad() {
     glBindVertexArray(0);
 }
 
-void processInput(GLFWwindow *window) {
+void processInput(GLFWwindow *window)
+{
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
@@ -807,11 +870,13 @@ void processInput(GLFWwindow *window) {
         camera.ProcessKeyboard(RIGHT, deltaTime);
 }
 
-void mouse_callback(GLFWwindow *window, double xposIn, double yposIn) {
+void mouse_callback(GLFWwindow *window, double xposIn, double yposIn)
+{
     float xpos = static_cast<float>(xposIn);
     float ypos = static_cast<float>(yposIn);
 
-    if (firstMouse) {
+    if (firstMouse)
+    {
         lastX = xpos;
         lastY = ypos;
         firstMouse = false;
@@ -826,23 +891,27 @@ void mouse_callback(GLFWwindow *window, double xposIn, double yposIn) {
     camera.ProcessMouseMovement(xoffset, yoffset);
 }
 
-void scroll_callback(GLFWwindow *window, double xoffset, double yoffset) {
+void scroll_callback(GLFWwindow *window, double xoffset, double yoffset)
+{
     camera.ProcessMouseScroll(static_cast<float>(yoffset));
 }
 
-void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
+void framebuffer_size_callback(GLFWwindow *window, int width, int height)
+{
     glViewport(0, 0, width, height);
 }
 
 // utility function for loading a 2D texture from file
 // ---------------------------------------------------
-unsigned int loadTexture(char const *path) {
+unsigned int loadTexture(char const *path)
+{
     unsigned int textureID;
     glGenTextures(1, &textureID);
 
     int width, height, nrComponents;
     unsigned char *data = stbi_load(path, &width, &height, &nrComponents, 0);
-    if (data) {
+    if (data)
+    {
         GLenum format;
         if (nrComponents == 1)
             format = GL_RED;
@@ -861,7 +930,8 @@ unsigned int loadTexture(char const *path) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
         stbi_image_free(data);
-    } else {
+    } else
+    {
         std::cout << "Texture failed to load at path: " << path << std::endl;
         stbi_image_free(data);
     }

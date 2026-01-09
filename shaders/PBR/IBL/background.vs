@@ -13,5 +13,6 @@ void main()
 	mat4 rotView = mat4(mat3(view));
 	vec4 clipPos = projection * rotView * vec4(WorldPos, 1.0);
 
+    // Set w component to 1.0 to ensure depth is at maximum distance
 	gl_Position = clipPos.xyww;
 }
